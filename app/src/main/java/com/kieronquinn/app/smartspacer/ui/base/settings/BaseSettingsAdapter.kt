@@ -199,8 +199,10 @@ abstract class BaseSettingsAdapter(
         itemSettingsSwitchSwitch.text = item.text
         var isChecked = item.enabled
         itemSettingsSwitchSwitch.isChecked = isChecked
+        itemSettingsSwitchSwitch.isEnabled = item.isSwitchEnabled
         whenResumed {
             binding.itemSettingsSwitchSwitch.onClicked().collect {
+                if(!item.isSwitchEnabled) return@collect
                 isChecked = !isChecked
                 itemSettingsSwitchSwitch.isChecked = isChecked
                 item.onChanged(isChecked)

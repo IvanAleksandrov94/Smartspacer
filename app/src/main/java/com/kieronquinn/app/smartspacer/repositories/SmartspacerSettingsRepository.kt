@@ -18,6 +18,8 @@ import com.kieronquinn.app.smartspacer.repositories.SmartspacerSettingsRepositor
 import com.kieronquinn.app.smartspacer.utils.extensions.getSystemHideSensitive
 import com.kieronquinn.app.smartspacer.utils.extensions.isAtLeastU
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.withContext
 import org.jetbrains.annotations.VisibleForTesting
 import kotlin.reflect.full.findAnnotations
@@ -410,7 +412,7 @@ class SmartspacerSettingsRepositoryImpl(
         private const val DEFAULT_IS_RESTRICTED_MODE_DISABLED = false
 
         private const val KEY_ENHANCED_MODE = "enhanced_mode"
-        private const val DEFAULT_ENHANCED_MODE = false
+        private const val DEFAULT_ENHANCED_MODE = true
 
         private const val KEY_HAS_USED_NATIVE_MODE = "has_used_native_mode"
         private const val DEFAULT_HAS_USED_NATIVE_MODE = false
@@ -555,7 +557,21 @@ class SmartspacerSettingsRepositoryImpl(
     override val hasSeenSetup = boolean(KEY_HAS_SEEN_SETUP, DEFAULT_HAS_SEEN_SETUP)
     override val userName = string(KEY_USER_NAME, DEFAULT_USER_NAME)
     override val isRestrictedModeDisabled = boolean(KEY_IS_RESTRICTED_MODE_DISABLED, DEFAULT_IS_RESTRICTED_MODE_DISABLED)
-    override val enhancedMode = boolean(KEY_ENHANCED_MODE, DEFAULT_ENHANCED_MODE)
+    override val enhancedMode: SmartspacerSetting<Boolean> = object: SmartspacerSetting<Boolean>() {
+        override suspend fun exists() = true
+        override fun existsSync() = true
+        override suspend fun set(value: Boolean) {}
+        override suspend fun get() = true
+        override suspend fun getOrNull() = true
+        override suspend fun clear(type: Class<Boolean>) {}
+        override fun setSync(value: Boolean) {}
+        override fun getSync() = true
+        override fun asFlow(): Flow<Boolean> = flowOf(true)
+        override fun asFlowNullable(): Flow<Boolean?> = flowOf(true)
+        override fun key() = KEY_ENHANCED_MODE
+        override suspend fun serialize(): String = "true"
+        override suspend fun deserialize(serialized: String) {}
+    }
     override val hasUsedNativeMode = boolean(KEY_HAS_USED_NATIVE_MODE, DEFAULT_HAS_USED_NATIVE_MODE)
     override val nativeTargetCountLimit = enum(KEY_NATIVE_TARGET_COUNT, DEFAULT_NATIVE_TARGET_COUNT)
     override val nativeHideIncompatible = boolean(KEY_NATIVE_HIDE_INCOMPATIBLE, DEFAULT_NATIVE_HIDE_INCOMPATIBLE)
@@ -684,6 +700,7 @@ class SmartspacerSettingsRepositoryImpl(
     }
 
     init {
+        sharedPreferences.edit().putBoolean(KEY_ENHANCED_MODE, true).apply()
         upgradePrefsIfRequired()
     }
 

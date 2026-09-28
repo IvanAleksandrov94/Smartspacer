@@ -66,7 +66,7 @@ class DefaultTarget: SmartspacerTargetProvider() {
     }
 
     private fun showShizukuNotificationIfNeeded(): Boolean {
-        if(!shizukuServiceRepository.isReady.value && settingsRepository.enhancedMode.getSync()){
+        if(false){
             notificationRepository.showShizukuNotification(
                 R.string.notification_shizuku_content_at_a_glance_target
             )
@@ -122,19 +122,7 @@ class DefaultTarget: SmartspacerTargetProvider() {
     }
 
     private fun getCompatibilityState(): CompatibilityState {
-        return when {
-            smartspaceComponent == null -> {
-                CompatibilityState.Incompatible(
-                    provideContext().getString(R.string.target_default_description_unsupported)
-                )
-            }
-            !settingsRepository.enhancedMode.getSync() -> {
-                CompatibilityState.Incompatible(
-                    provideContext().getString(R.string.target_default_description_enhanced)
-                )
-            }
-            else -> CompatibilityState.Compatible
-        }
+        return CompatibilityState.Compatible
     }
 
     private fun SmartspaceTarget.getTargetType(): String {

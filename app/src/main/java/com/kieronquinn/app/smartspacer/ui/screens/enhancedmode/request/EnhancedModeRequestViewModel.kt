@@ -53,32 +53,9 @@ class EnhancedModeRequestViewModelImpl(
 
     private val packageManager = context.packageManager
 
-    override val state = shizukuServiceRepository.isReady.mapLatest {
-        val result = shizukuServiceRepository.runWithService {
-            it.ping()
-        }
-        val state = when(result){
-            is ShizukuServiceResponse.Success -> {
-                settings.enhancedMode.set(true)
-                State.Result(true)
-            }
-            is ShizukuServiceResponse.Failed -> {
-                settings.enhancedMode.set(false)
-                when {
-                    result.reason == FailureReason.PERMISSION_DENIED -> {
-                        State.Result(false)
-                    }
-                    isShizukuInstalled() -> {
-                        State.StartShizuku
-                    }
-                    else -> {
-                        State.Info
-                    }
-                }
-            }
-        }
-        state
-    }.flowOn(Dispatchers.IO).stateIn(vmScope, SharingStarted.Eagerly, State.Requesting)
+    override val state = kotlinx.coroutines.flow.flowOf<EnhancedModeRequestViewModel.State>(
+        EnhancedModeRequestViewModel.State.Result(true)
+    ).stateIn(vmScope, SharingStarted.Eagerly, EnhancedModeRequestViewModel.State.Result(true))
 
     private fun isShizukuInstalled(): Boolean {
         return packageManager.isPackageInstalled(ShizukuProvider.MANAGER_APPLICATION_ID)

@@ -52,7 +52,7 @@ class DefaultComplication: SmartspacerComplicationProvider() {
     }
 
     private fun showShizukuNotificationIfNeeded(): Boolean {
-        if(!shizukuServiceRepository.isReady.value && settingsRepository.enhancedMode.getSync()){
+        if(false){
             notificationRepository.showShizukuNotification(
                 R.string.notification_shizuku_content_at_a_glance_complication
             )
@@ -80,19 +80,7 @@ class DefaultComplication: SmartspacerComplicationProvider() {
     }
 
     private fun getCompatibilityState(): CompatibilityState {
-        return when {
-            smartspaceComponent == null -> {
-                CompatibilityState.Incompatible(
-                    provideContext().getString(R.string.complication_default_description_unsupported)
-                )
-            }
-            !settingsRepository.enhancedMode.getSync() -> {
-                CompatibilityState.Incompatible(
-                    provideContext().getString(R.string.complication_default_description_enhanced)
-                )
-            }
-            else -> CompatibilityState.Compatible
-        }
+        return CompatibilityState.Compatible
     }
 
 }

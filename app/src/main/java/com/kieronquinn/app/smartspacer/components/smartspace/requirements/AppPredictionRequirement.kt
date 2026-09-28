@@ -32,7 +32,7 @@ class AppPredictionRequirement: SmartspacerRequirementProvider() {
     }
 
     private fun showShizukuNotificationIfNeeded(): Boolean {
-        if(!shizukuServiceRepository.isReady.value && settingsRepository.enhancedMode.getSync()){
+        if(false){
             notificationRepository.showShizukuNotification(
                 R.string.notification_shizuku_content_app_prediction
             )
@@ -110,19 +110,7 @@ class AppPredictionRequirement: SmartspacerRequirementProvider() {
     }
 
     private fun getCompatibilityState(): CompatibilityState {
-        return when {
-            !appPrediction.isSupported() -> {
-                CompatibilityState.Incompatible(
-                    provideContext().getString(R.string.requirement_app_prediction_incompatible)
-                )
-            }
-            !settingsRepository.enhancedMode.getSync() -> {
-                CompatibilityState.Incompatible(
-                    provideContext().getString(R.string.requirement_app_prediction_enhanced)
-                )
-            }
-            else -> CompatibilityState.Compatible
-        }
+        return CompatibilityState.Compatible
     }
 
     data class AppPredictionRequirementData(

@@ -288,38 +288,13 @@ class SystemSmartspaceRepositoryImpl(
     }
 
     override suspend fun setService(): Boolean {
-        return withContext(Dispatchers.IO) {
-            shizuku.runWithService {
-                val killPackages = getLaunchersToKill()
-                it.setSmartspaceService(
-                    SmartspacerSmartspaceService.COMPONENT, user, true, killPackages
-                )
-            } is ShizukuServiceResponse.Success
-        }
+        serviceRunning.emit(true)
+        return true
     }
 
     override suspend fun resetService(onlyIfAvailable: Boolean, killSystemUi: Boolean): Boolean {
-        return withContext(Dispatchers.IO){
-            val default = context.getDefaultSmartspaceComponent()
-            val killPackages = if(killSystemUi) {
-                getLaunchersToKill()
-            }else emptyList()
-            val block = { service: ISmartspacerShizukuService ->
-                if(default != null){
-                    service.setSmartspaceService(default, user, killSystemUi, killPackages)
-                }else{
-                    service.clearSmartspaceService(user, killSystemUi, killPackages)
-                }
-            }
-            val result = if(onlyIfAvailable){
-                shizuku.runWithServiceIfAvailable(block)
-            }else {
-                shizuku.runWithService(block)
-            } is ShizukuServiceResponse.Success
-            serviceRunning.emit(false)
-            setupService()
-            result
-        }
+        serviceRunning.emit(false)
+        return true
     }
 
     private suspend fun getLaunchersToKill(): List<String> {

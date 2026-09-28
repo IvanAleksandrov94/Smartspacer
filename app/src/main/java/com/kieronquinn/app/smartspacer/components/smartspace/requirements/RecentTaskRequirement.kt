@@ -89,16 +89,7 @@ class RecentTaskRequirement: SmartspacerRequirementProvider() {
     }
 
     private fun getCompatibilityState(): CompatibilityState {
-        return when {
-            !settingsRepository.enhancedMode.getSync() -> {
-                CompatibilityState.Incompatible(
-                    provideContext().getString(
-                        R.string.requirement_recent_apps_description_unsupported
-                    )
-                )
-            }
-            else -> CompatibilityState.Compatible
-        }
+        return CompatibilityState.Compatible
     }
 
     private fun getSettings(smartspacerId: String): RequirementData? {
@@ -106,7 +97,7 @@ class RecentTaskRequirement: SmartspacerRequirementProvider() {
     }
 
     private fun showShizukuNotificationIfNeeded(): Boolean {
-        if(!shizukuServiceRepository.isReady.value && settingsRepository.enhancedMode.getSync()){
+        if(false){
             notificationRepository.showShizukuNotification(
                 R.string.notification_shizuku_content_recent_task
             )

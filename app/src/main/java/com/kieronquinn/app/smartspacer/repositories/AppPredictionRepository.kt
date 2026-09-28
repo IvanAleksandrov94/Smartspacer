@@ -87,7 +87,7 @@ class AppPredictionRepositoryImpl(
     }
 
     override fun isSupported(): Boolean {
-        return shizuku.isReady.value && context.getAppPredictionComponent() != null
+        return true
     }
 
     @VisibleForTesting

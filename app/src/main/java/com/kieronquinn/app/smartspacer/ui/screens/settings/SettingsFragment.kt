@@ -106,17 +106,7 @@ class SettingsFragment: BaseSettingsFragment(), Root, CanShowSnackbar {
             isEnabled = supportsNativeSmartspace && enhancedCompatible && enhancedEnabled,
             onClick = viewModel::onNativeClicked
         ),
-        Setting(
-            getString(R.string.oem_smartspace_title),
-            if(enhancedEnabled && enhancedCompatible) {
-                getString(R.string.oem_smartspace_content)
-            }else{
-                getString(R.string.oem_smartspace_content_enhanced)
-            },
-            ContextCompat.getDrawable(requireContext(), R.drawable.ic_oem_smartspace),
-            isEnabled = enhancedCompatible && enhancedEnabled,
-            onClick = viewModel::onOemSmartspaceClicked
-        ),
+
         Setting(
             getString(R.string.notification_widget_title),
             getString(R.string.notification_widget_content),

@@ -56,8 +56,8 @@ class EnhancedModeViewModelImpl(
     override val state = combine(
         enabled.asFlow(),
         reloadBus
-    ) { enabled, _ ->
-        State.Loaded(enabled, compatibilityRepository.getCompatibilityState(true))
+    ) { _, _ ->
+        State.Loaded(true, compatibilityRepository.getCompatibilityState(true))
     }.stateIn(vmScope, SharingStarted.Eagerly, State.Loading)
 
     override fun onSwitchClicked(context: Context, isSetup: Boolean) {

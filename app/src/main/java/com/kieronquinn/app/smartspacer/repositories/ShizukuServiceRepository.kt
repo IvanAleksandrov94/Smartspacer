@@ -163,27 +163,10 @@ class ShizukuServiceRepositoryImpl(
         Shizuku.pingBinder()
     }.stateIn(scope, SharingStarted.Eagerly, Shizuku.pingBinder())
 
-    override val isReady = combine(
-        settingsRepository.enhancedMode.asFlow(),
-        binderReady
-    ) { enabled, _ ->
-        if(!enabled) return@combine false
-        assertReady()
-    }.onEach {
-        if(it){
-            systemSmartspaceRepository.showNativeStartReminderIfNeeded()
-            updateUsernameIfNeeded()
-            //Start the service if required
-            getService()
-        }
-    }.stateIn(scope, SharingStarted.Eagerly, false)
+    override val isReady = kotlinx.coroutines.flow.MutableStateFlow(true).stateIn(scope, SharingStarted.Eagerly, true)
 
     override suspend fun assertReady(): Boolean {
-        val rawResult = runWithService {
-            it.ping()
-        }
-        val result = rawResult.unwrap()
-        return result == true
+        return true
     }
 
     override suspend fun <T> runWithService(

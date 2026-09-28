@@ -105,18 +105,54 @@ fun Context.hasNotificationPermission(): Boolean {
 
 @SuppressLint("DiscouragedApi")
 fun Context.getDefaultSmartspaceComponent(): ComponentName? {
+    val asiComponent = ComponentName(
+        "com.google.android.as",
+        "com.google.android.apps.miphone.aiai.app.AiAiSmartspaceService"
+    )
     val id = resources.getIdentifier(
         "config_defaultSmartspaceService", "string", "android"
     )
-    if(id == 0) return null
-    val component = resources.getString(id)
-    if(component.isBlank()) return null
-    val componentName = ComponentName.unflattenFromString(component) ?: return null
-    //Some ROMs have the value set but the wrong ASI build so check it's actually available
+    val configuredComponent = if (id != 0) {
+        val component = resources.getString(id)
+        if (component.isNotBlank()) ComponentName.unflattenFromString(component) else null
+    } else null
+
+    val candidate = if (configuredComponent != null &&
+        configuredComponent.packageName != BuildConfig.APPLICATION_ID &&
+        configuredComponent.packageName != packageName
+    ) {
+        configuredComponent
+    } else {
+        null
+    }
+
+    if (candidate != null) {
+        try {
+            packageManager.getServiceInfo(candidate)
+            return candidate
+        } catch (e: Exception) {
+            // Fall back
+        }
+    }
+
+    try {
+        packageManager.getServiceInfo(asiComponent)
+        return asiComponent
+    } catch (e: Exception) {
+        // Fall back to querying
+    }
+
     return try {
-        packageManager.getServiceInfo(componentName)
-        componentName
-    }catch (e: NameNotFoundException){
+        val intent = Intent("android.service.smartspace.SmartspaceService")
+        val services = packageManager.queryIntentServices(intent, 0)
+        val nonSmartspacer = services.firstOrNull {
+            it.serviceInfo.packageName != BuildConfig.APPLICATION_ID &&
+            it.serviceInfo.packageName != packageName
+        }
+        nonSmartspacer?.let {
+            ComponentName(it.serviceInfo.packageName, it.serviceInfo.name)
+        }
+    } catch (e: Exception) {
         null
     }
 }

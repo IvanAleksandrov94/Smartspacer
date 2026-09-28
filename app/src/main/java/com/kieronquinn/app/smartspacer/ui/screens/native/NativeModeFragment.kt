@@ -149,11 +149,8 @@ class NativeModeFragment: BoundFragment<FragmentNativeBinding>(FragmentNativeBin
     }
 
     private fun setupSwitch() = with(binding.nativeSwitch) {
-        whenResumed {
-            onClicked().collect {
-                viewModel.onSwitchClicked()
-            }
-        }
+        isChecked = true
+        isEnabled = false
     }
 
     private fun setupCompatibilityList() = with(binding.nativeInfoCompatibilityList) {
@@ -208,10 +205,11 @@ class NativeModeFragment: BoundFragment<FragmentNativeBinding>(FragmentNativeBin
             }
             is State.Loaded -> {
                 binding.nativeLoading.root.isVisible = false
-                binding.nativeSwitch.isVisible = state.shizukuReady
-                binding.nativeLoaded.isVisible = state.shizukuReady
-                binding.nativeShizukuError.isVisible = !state.shizukuReady
-                binding.nativeSwitch.isChecked = state.isEnabled
+                binding.nativeSwitch.isVisible = true
+                binding.nativeLoaded.isVisible = true
+                binding.nativeShizukuError.isVisible = false
+                binding.nativeSwitch.isChecked = true
+                binding.nativeSwitch.isEnabled = false
                 binding.nativeSwitchContent.text = state.compatibility.getContent()
                 adapter.items = state.compatibility
                 adapter.notifyDataSetChanged()

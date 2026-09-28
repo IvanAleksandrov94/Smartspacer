@@ -1,6 +1,5 @@
 package com.kieronquinn.app.smartspacer.components.smartspace
 
-import android.app.IServiceConnection
 import android.app.smartspace.SmartspaceConfig
 import android.app.smartspace.SmartspaceSessionId
 import android.app.smartspace.SmartspaceTarget
@@ -11,15 +10,10 @@ import android.content.ServiceConnection
 import android.os.DeadObjectException
 import android.os.IBinder
 import android.service.smartspace.ISmartspaceService
-import com.kieronquinn.app.smartspacer.ISmartspacerShizukuService
 import com.kieronquinn.app.smartspacer.components.smartspace.SmartspaceSession.OnTargetsAvailableListener
-import com.kieronquinn.app.smartspacer.repositories.ShizukuServiceRepository
 import com.kieronquinn.app.smartspacer.repositories.SystemSmartspaceRepository
 import com.kieronquinn.app.smartspacer.sdk.model.UiSurface
 import com.kieronquinn.app.smartspacer.utils.extensions.getDefaultSmartspaceComponent
-import com.kieronquinn.app.smartspacer.utils.extensions.getIApplicationThread
-import com.kieronquinn.app.smartspacer.utils.extensions.getMainThreadHandler
-import com.kieronquinn.app.smartspacer.utils.extensions.getServiceDispatcher
 import com.kieronquinn.app.smartspacer.utils.extensions.suspendCoroutineWithTimeout
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -29,16 +23,15 @@ import java.util.concurrent.Executors
 import kotlin.coroutines.resume
 
 /**
- *  Replacement for [android.app.smartspace.SmartspaceManager] that calls directly to the system
- *  service, if it exists.
+ *  Direct system client for Smartspace (Google ASI or system service).
+ *  Runs natively as privileged system app with android.permission.MANAGE_SMARTSPACE.
  */
 class SmartspacerSmartspaceManager(private val context: Context): KoinComponent {
 
     companion object {
-        private const val BIND_TIMEOUT = 2500L
+        private const val BIND_TIMEOUT = 5000L
     }
 
-    private val shizuku by inject<ShizukuServiceRepository>()
     private val systemSmartspaceRepository by inject<SystemSmartspaceRepository>()
 
     private val serviceIntent = context.getDefaultSmartspaceComponent()?.let {
@@ -48,16 +41,9 @@ class SmartspacerSmartspaceManager(private val context: Context): KoinComponent 
     }
 
     private val bindLock = Mutex()
-    private var serviceConnection: IServiceConnection? = null
+    private var serviceConnection: ServiceConnection? = null
     private var service: ISmartspaceService? = null
     private val executor = Executors.newSingleThreadExecutor()
-
-    private val applicationThread by lazy {
-        context.getIApplicationThread().asBinder()
-    }
-    private val handler by lazy {
-        context.getMainThreadHandler()
-    }
 
     private val deathRecipient = IBinder.DeathRecipient {
         serviceConnection = null
@@ -70,17 +56,15 @@ class SmartspacerSmartspaceManager(private val context: Context): KoinComponent 
     suspend fun createSmartspaceSessions(
         onTargetsAvailable: (surface: UiSurface, targets: List<SmartspaceTarget>) -> Unit
     ) {
-        shizuku.runWithService {
-            it.runWithServiceLocked {
-                UiSurface.entries.forEach { surface ->
-                    val config = SmartspaceConfig.Builder(context, surface.surface)
-                        .setSmartspaceTargetCount(5)
-                        .build()
-                    SmartspaceSession(this, context, config).apply {
-                        addOnTargetsAvailableListener(
-                            executor, createCallback(surface, onTargetsAvailable)
-                        )
-                    }
+        runWithServiceLocked {
+            UiSurface.entries.forEach { surface ->
+                val config = SmartspaceConfig.Builder(context, surface.surface)
+                    .setSmartspaceTargetCount(5)
+                    .build()
+                SmartspaceSession(this, context, config).apply {
+                    addOnTargetsAvailableListener(
+                        executor, createCallback(surface, onTargetsAvailable)
+                    )
                 }
             }
         }
@@ -98,20 +82,18 @@ class SmartspacerSmartspaceManager(private val context: Context): KoinComponent 
     }
 
     suspend fun destroySmartspaceSession(sessionId: SmartspaceSessionId) {
-        shizuku.runWithService {
-            it.runWithServiceLocked {
-                onDestroySmartspaceSession(sessionId)
-            }
+        runWithServiceLocked {
+            onDestroySmartspaceSession(sessionId)
         }
     }
 
-    private suspend fun <T> ISmartspacerShizukuService.runWithServiceLocked(
+    private suspend fun <T> runWithServiceLocked(
         block: ISmartspaceService.() -> T
-    ) = bindLock.withLock {
+    ): T? = bindLock.withLock {
         runWithService(block)
     }
 
-    private suspend fun <T> ISmartspacerShizukuService.runWithService(
+    private suspend fun <T> runWithService(
         block: ISmartspaceService.() -> T
     ): T? = suspendCoroutineWithTimeout(BIND_TIMEOUT) { resume ->
         var hasResumed = false
@@ -120,16 +102,28 @@ class SmartspacerSmartspaceManager(private val context: Context): KoinComponent 
                 hasResumed = true
                 resume.resume(block(it))
                 return@suspendCoroutineWithTimeout
-            }catch (e: DeadObjectException) {
-                //Service died, reconnect
+            } catch (e: DeadObjectException) {
+                service = null
             }
         }
-        val serviceConnection = object: ServiceConnection {
-            override fun onServiceConnected(name: ComponentName, service: IBinder) {
-                service.linkToDeath(deathRecipient, 0)
-                val connection = ISmartspaceService.Stub.asInterface(service)
+        val targetIntent = serviceIntent
+        if (targetIntent == null) {
+            if (!hasResumed) {
+                hasResumed = true
+                resume.resume(null)
+            }
+            return@suspendCoroutineWithTimeout
+        }
+        val conn = object: ServiceConnection {
+            override fun onServiceConnected(name: ComponentName, serviceBinder: IBinder) {
+                try {
+                    serviceBinder.linkToDeath(deathRecipient, 0)
+                } catch (e: Exception) {
+                    // Ignore
+                }
+                val connection = ISmartspaceService.Stub.asInterface(serviceBinder)
                 this@SmartspacerSmartspaceManager.service = connection
-                if(!hasResumed) {
+                if (!hasResumed) {
                     hasResumed = true
                     resume.resume(block(connection))
                 }
@@ -140,9 +134,19 @@ class SmartspacerSmartspaceManager(private val context: Context): KoinComponent 
                 serviceConnection = null
             }
         }
-        val dispatcher = context.getServiceDispatcher(serviceConnection, handler, 0)
-        this@SmartspacerSmartspaceManager.serviceConnection = dispatcher
-        bindService(dispatcher.asBinder(), applicationThread, serviceIntent)
+        this@SmartspacerSmartspaceManager.serviceConnection = conn
+        try {
+            val bound = context.bindService(targetIntent, conn, Context.BIND_AUTO_CREATE)
+            if (!bound && !hasResumed) {
+                hasResumed = true
+                resume.resume(null)
+            }
+        } catch (e: Exception) {
+            if (!hasResumed) {
+                hasResumed = true
+                resume.resume(null)
+            }
+        }
     }
 
 }

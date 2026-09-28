@@ -68,23 +68,14 @@ class NativeModeViewModelImpl(
     ) { compat, running, ready ->
         val isEnhancedEnabled = settingsRepository.enhancedMode.getSync() && compat.isNotEmpty()
         if(isEnhancedEnabled) {
-            State.Loaded(ready, running, compat)
+            State.Loaded(shizukuReady = true, isEnabled = true, compatibility = compat)
         }else{
             State.Dismiss
         }
     }.stateIn(vmScope, SharingStarted.Eagerly, State.Loading)
 
     override fun onSwitchClicked() {
-        vmScope.launch {
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return@launch
-            val isRunning = (state.value as? State.Loaded)?.isEnabled ?: return@launch
-            if(isRunning){
-                systemSmartspaceRepository.resetService()
-                settingsRepository.hasUsedNativeMode.set(false)
-            }else{
-                systemSmartspaceRepository.setService()
-            }
-        }
+        // Locked permanently enabled in system mode
     }
 
     override fun onOpenShizukuClicked(context: Context, isSetup: Boolean) {
