@@ -9,6 +9,13 @@ import com.kieronquinn.app.smartspacer.utils.extensions.getContentText
 import com.kieronquinn.app.smartspacer.utils.extensions.hasNotificationPermission
 import android.app.NotificationChannel as AndroidNotificationChannel
 
+private fun AndroidNotificationChannel.safeSetBlockable(blockable: Boolean = true) {
+    try {
+        val method = javaClass.getMethod("setBlockable", Boolean::class.javaPrimitiveType)
+        method.invoke(this, blockable)
+    } catch (_: Throwable) {}
+}
+
 fun Context.createNotification(
     channel: NotificationChannel,
     builder: (NotificationCompat.Builder) -> Unit
@@ -21,6 +28,7 @@ fun Context.createNotification(
             channel.importance
         ).apply {
             description = getString(channel.descRes)
+            safeSetBlockable(true)
             channel.options(this)
         }
     notificationManager.createNotificationChannel(notificationChannel)
@@ -39,65 +47,82 @@ enum class NotificationChannel(
 ) {
     BACKGROUND_SERVICE(
         "background_service",
-        NotificationManager.IMPORTANCE_DEFAULT,
+        NotificationManager.IMPORTANCE_LOW,
         R.string.notification_channel_background_service_title,
         R.string.notification_channel_background_service_subtitle,
-        options = { setShowBadge(false) }
+        options = {
+            setShowBadge(false)
+            safeSetBlockable(true)
+        }
     ),
     SAFE_MODE(
         "safe_mode",
-        NotificationManager.IMPORTANCE_HIGH,
+        NotificationManager.IMPORTANCE_LOW,
         R.string.notification_channel_safe_mode_title,
-        R.string.notification_channel_safe_mode_subtitle
+        R.string.notification_channel_safe_mode_subtitle,
+        options = { safeSetBlockable(true) }
     ),
     ERROR(
         "error",
-        NotificationManager.IMPORTANCE_HIGH,
+        NotificationManager.IMPORTANCE_LOW,
         R.string.notification_channel_error_title,
-        R.string.notification_channel_error_content
+        R.string.notification_channel_error_content,
+        options = { safeSetBlockable(true) }
     ),
     ACCESSIBILITY(
         "accessibility",
-        NotificationManager.IMPORTANCE_HIGH,
+        NotificationManager.IMPORTANCE_LOW,
         R.string.notification_channel_accessibility_title,
-        R.string.notification_channel_accessibility_content
+        R.string.notification_channel_accessibility_content,
+        options = { safeSetBlockable(true) }
     ),
     NATIVE_MODE(
         "native_mode",
-        NotificationManager.IMPORTANCE_HIGH,
+        NotificationManager.IMPORTANCE_LOW,
         R.string.notification_channel_native_title,
-        R.string.notification_channel_native_content
+        R.string.notification_channel_native_content,
+        options = {
+            setShowBadge(false)
+            safeSetBlockable(true)
+        }
     ),
     SHIZUKU(
         "shizuku",
-        NotificationManager.IMPORTANCE_HIGH,
+        NotificationManager.IMPORTANCE_LOW,
         R.string.notification_channel_shizuku_reminder_title,
-        R.string.notification_channel_shizuku_reminder_content
+        R.string.notification_channel_shizuku_reminder_content,
+        options = { safeSetBlockable(true) }
     ),
     OEM(
         "oem",
-        NotificationManager.IMPORTANCE_HIGH,
+        NotificationManager.IMPORTANCE_LOW,
         R.string.notification_channel_oem_title,
-        R.string.notification_channel_oem_content
+        R.string.notification_channel_oem_content,
+        options = { safeSetBlockable(true) }
     ),
     UPDATES(
         "updates",
-        NotificationManager.IMPORTANCE_HIGH,
+        NotificationManager.IMPORTANCE_LOW,
         R.string.notification_channel_updates_title,
-        R.string.notification_channel_updates_content
+        R.string.notification_channel_updates_content,
+        options = { safeSetBlockable(true) }
     ),
     PLUGIN_UPDATES(
         "updates",
-        NotificationManager.IMPORTANCE_HIGH,
+        NotificationManager.IMPORTANCE_LOW,
         R.string.notification_channel_plugin_updates_title,
-        R.string.notification_channel_plugin_updates_content
+        R.string.notification_channel_plugin_updates_content,
+        options = { safeSetBlockable(true) }
     ),
     WIDGET_NOTIFICATION(
         "widget_notification",
-        NotificationManager.IMPORTANCE_MAX,
+        NotificationManager.IMPORTANCE_LOW,
         R.string.notification_channel_widget_title,
         R.string.notification_channel_widget_content,
-        options = { setShowBadge(false) }
+        options = {
+            setShowBadge(false)
+            safeSetBlockable(true)
+        }
     );
 
     fun isEnabled(context: Context): Boolean {
