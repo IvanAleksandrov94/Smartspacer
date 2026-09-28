@@ -10,6 +10,7 @@ import android.graphics.PorterDuff
 import android.os.Build
 import android.util.AttributeSet
 import android.view.LayoutInflater
+import android.view.MotionEvent
 import android.widget.FrameLayout
 import android.widget.Switch
 import android.widget.TextView
@@ -121,12 +122,34 @@ open class MonetSwitch: FrameLayout, MonetColorsChangedListener {
         typedArray.recycle()
         materialTypedArray.recycle()
         card.setOnClickListener {
-            performClick()
+            if (isEnabled) performClick()
         }
     }
 
     private val monet by lazy {
         MonetCompat.getInstance()
+    }
+
+
+    override fun setEnabled(enabled: Boolean) {
+        super.setEnabled(enabled)
+        isClickable = enabled
+        card.isEnabled = enabled
+        card.isClickable = enabled
+        switch.isEnabled = enabled
+        switch.isClickable = enabled
+    }
+
+    override fun dispatchTouchEvent(ev: MotionEvent?): Boolean {
+        if (!isEnabled) {
+            return true
+        }
+        return super.dispatchTouchEvent(ev)
+    }
+
+    override fun performClick(): Boolean {
+        if (!isEnabled) return false
+        return super.performClick()
     }
 
     init {
@@ -179,7 +202,7 @@ open class MonetSwitch: FrameLayout, MonetColorsChangedListener {
         card.isActivated = switch.isChecked
         switch.setOnCheckedChangeListener { _, _ ->
             card.isActivated = switch.isChecked
-            if(!suppressCheckChange){
+            if(!suppressCheckChange && isEnabled){
                 performClick()
             }
         }

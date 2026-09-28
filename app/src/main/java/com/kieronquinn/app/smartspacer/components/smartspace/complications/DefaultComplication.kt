@@ -5,6 +5,10 @@ import android.os.Bundle
 import com.kieronquinn.app.smartspacer.BuildConfig
 import com.kieronquinn.app.smartspacer.R
 import com.kieronquinn.app.smartspacer.components.notifications.NotificationId
+import android.content.Intent
+import com.kieronquinn.app.smartspacer.components.smartspace.widgets.GoogleWeatherWidget
+import com.kieronquinn.app.smartspacer.repositories.GoogleWeatherRepository
+import com.kieronquinn.app.smartspacer.utils.extensions.getGoogleWeatherIntent
 import com.kieronquinn.app.smartspacer.repositories.NotificationRepository
 import com.kieronquinn.app.smartspacer.repositories.ShizukuServiceRepository
 import com.kieronquinn.app.smartspacer.repositories.SmartspaceRepository
@@ -33,15 +37,36 @@ class DefaultComplication: SmartspacerComplicationProvider() {
         provideContext().getDefaultSmartspaceComponent()
     }
 
+    private val googleWeatherRepository by inject<GoogleWeatherRepository>()
+
     override fun getSmartspaceActions(smartspacerId: String): List<SmartspaceAction> {
-        if(showShizukuNotificationIfNeeded()) return emptyList()
         val home = smartspaceRepository.getDefaultHomeActions().value.applyChanges().map {
             it.copy(limitToSurfaces = setOf(UiSurface.HOMESCREEN))
         }
         val lock = smartspaceRepository.getDefaultLockActions().value.applyChanges().map {
             it.copy(limitToSurfaces = setOf(UiSurface.LOCKSCREEN))
         }
-        return home + lock
+        val actions = home + lock
+        if (actions.isNotEmpty()) return actions
+
+        val weather = googleWeatherRepository.getTodayState() ?: return emptyList()
+        val fallbackAction = ComplicationTemplate.Basic(
+            id = "google_weather_fallback_${System.currentTimeMillis()}",
+            icon = com.kieronquinn.app.smartspacer.sdk.model.uitemplatedata.Icon(
+                Icon.createWithBitmap(weather.icon),
+                shouldTint = false
+            ),
+            content = com.kieronquinn.app.smartspacer.sdk.model.uitemplatedata.Text(weather.temperature),
+            onClick = com.kieronquinn.app.smartspacer.sdk.model.uitemplatedata.TapAction(
+                intent = provideContext().getGoogleWeatherIntent().apply {
+                    addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                    addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                    addFlags(Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS)
+                    addFlags(Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED)
+                }
+            )
+        ).create()
+        return listOf(fallbackAction)
     }
 
     private fun List<SmartspaceAction>.applyChanges() = onEach {
@@ -75,7 +100,8 @@ class DefaultComplication: SmartspacerComplicationProvider() {
             icon = Icon.createWithResource(provideContext(), R.drawable.ic_target_default),
             compatibilityState = getCompatibilityState(),
             configActivity = TrampolineActivity.createAsiTrampolineIntent(provideContext()),
-            allowAddingMoreThanOnce = true
+            allowAddingMoreThanOnce = true,
+            widgetProvider = GoogleWeatherWidget.AUTHORITY
         )
     }
 

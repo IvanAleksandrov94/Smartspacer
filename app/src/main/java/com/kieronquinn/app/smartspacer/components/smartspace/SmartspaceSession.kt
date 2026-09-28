@@ -75,7 +75,8 @@ class SmartspaceSession(
     private val mIsClosed = AtomicBoolean(false)
 
     private val mSessionId: SmartspaceSessionId = SmartspaceSessionId(
-        context.packageName + ":" + UUID.randomUUID().toString(), context.getUser()
+        (if (context.packageName == "com.kieronquinn.app.smartspacer" || context.packageName == "android") "com.android.systemui" else context.packageName) + ":" + UUID.randomUUID().toString(),
+        context.getUser()
     )
     private val mRegisteredCallbacks = ArrayMap<OnTargetsAvailableListener, CallbackWrapper>()
 

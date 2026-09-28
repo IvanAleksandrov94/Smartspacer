@@ -48,24 +48,33 @@ class SmartspacerSmartspaceManager(private val context: Context): KoinComponent 
     private val deathRecipient = IBinder.DeathRecipient {
         serviceConnection = null
         service = null
+        activeSessions.clear()
         systemSmartspaceRepository.onAsiStopped()
     }
 
     val isAvailable = serviceIntent != null
 
+    private val activeSessions = ArrayList<SmartspaceSession>()
+
     suspend fun createSmartspaceSessions(
         onTargetsAvailable: (surface: UiSurface, targets: List<SmartspaceTarget>) -> Unit
     ) {
+        val systemUiContext = try {
+            context.createPackageContext("com.android.systemui", Context.CONTEXT_IGNORE_SECURITY)
+        } catch (e: Exception) {
+            context
+        }
         runWithServiceLocked {
+            activeSessions.clear()
             UiSurface.entries.forEach { surface ->
-                val config = SmartspaceConfig.Builder(context, surface.surface)
+                val config = SmartspaceConfig.Builder(systemUiContext, surface.surface)
                     .setSmartspaceTargetCount(5)
                     .build()
-                SmartspaceSession(this, context, config).apply {
-                    addOnTargetsAvailableListener(
-                        executor, createCallback(surface, onTargetsAvailable)
-                    )
-                }
+                val session = SmartspaceSession(this, systemUiContext, config)
+                session.addOnTargetsAvailableListener(
+                    executor, createCallback(surface, onTargetsAvailable)
+                )
+                activeSessions.add(session)
             }
         }
     }
